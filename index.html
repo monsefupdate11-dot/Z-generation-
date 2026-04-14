@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z Generation PRO System</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #00ff99;
+            --bg-dark: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --text: #ffffff;
+            --danger: #ff4d4d;
+        }
+
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-dark); color: var(--text); }
+        header { background: #111; padding: 20px; text-align: center; color: var(--primary); font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid var(--primary); position: relative; }
+        
+        .logout { position: absolute; right: 20px; top: 20px; background: var(--danger); padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+        
+        .container { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: #111; padding: 20px; border-right: 1px solid #333; }
+        .sidebar button { width: 100%; margin: 10px 0; padding: 12px; background: transparent; color: white; border: 1px solid var(--primary); border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        .sidebar button:hover { background: var(--primary); color: black; }
+
+        .main { flex: 1; padding: 30px; }
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .card { background: var(--card-bg); padding: 20px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-box { background: #222; padding: 20px; border-radius: 10px; text-align: center; border-left: 4px solid var(--primary); }
+        .stat-box h2 { color: var(--primary); margin: 0; }
+
+        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #222; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
+        button.action { background: var(--primary); color: black; border: none; padding: 12px 20px; cursor: pointer; font-weight: bold; border-radius: 5px; width: 100%; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #333; padding: 12px; text-align: left; }
+        th { background: #222; color: var(--primary); }
+        
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .status-active { background: rgba(0, 255, 153, 0.2); color: var(--primary); }
+        .status-expired { background: rgba(255, 77, 77, 0.2); color: var(--danger); }
+
+        #calendar { background: white; color: black; border-radius: 10px; padding: 15px; }
+
+        #loginPage { display: flex; justify-content: center; align-items: center; height: 100vh; background: #050505; }
+        .login-box { background: #111; padding: 40px; border-radius: 15px; width: 320px; border: 1px solid var(--primary); text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="loginPage">
+    <div class="login-box">
+        <h2 style="color:var(--primary)">Z-PRO LOGIN</h2>
+        <input id="loginEmail" placeholder="Email (admin@zfit.com)">
+        <input id="loginPass" type="password" placeholder="Password (123456)">
+        <button class="action" onclick="handleLogin()">ENTER SYSTEM</button>
+        <p id="loginError" style="color:var(--danger); margin-top:10px;"></p>
+    </div>
+</div>
+
+<div id="system" style="display:none;">
+    <header>
+        Z Generation PRO ⚡
+        <span class="logout" onclick="location.reload()">Logout</span>
+    </header>
+
+    <div class="container">
+        <div class="sidebar">
+            <button onclick="showSection('dashboard')">Dashboard</button>
+            <button onclick="showSection('members')">Member Manager</button>
+            <button onclick="showSection('booking')">Booking Hub</button>
+        </div>
+
+        <div class="main">
+            <div id="dashboard" class="section active">
+                <div class="grid-stats">
+                    <div class="stat-box">
+                        <p>Total Members</p>
+                        <h2 id="statTotalMembers">0</h2>
+                    </div>
+                    <div class="stat-box">
+                        <p>Active Bookings</p>
+                        <h2 id="statTotalBookings">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div id="members" class="section">
+                <div class="card">
+                    <h3>Register New Member</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <input id="mName" placeholder="Full Name">
+                        <input id="mPhone" placeholder="Phone Number">
+                    </div>
+                    <select id="mPlan">
+                        <option value="1">Monthly Plan (30 Days)</option>
+                        <option value="3">Quarterly Plan (90 Days)</option>
+                        <option value="12">Yearly Plan (365 Days)</option>
+                    </select>
+                    <button class="action" onclick="addMember()">Register Member</button>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; justify-content: space-between; align-items: center;">
+                        <h3>Member Directory</h3>
+                        <input id="searchBar" onkeyup="filterMembers()" placeholder="Search members..." style="width: 250px; margin: 0;">
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Plan</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="booking" class="section">
+                <div class="card">
+                    <h3>Training Schedule</h3>
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // DATA INITIALIZATION
+    let members = JSON.parse(localStorage.getItem("z_members")) || [];
+    let bookings = JSON.parse(localStorage.getItem("z_bookings")) || [];
+    let calendar;
+
+    // LOGIN LOGIC
+    function handleLogin() {
+        const email = document.getElementById("loginEmail").value;
+        const pass = document.getElementById("loginPass").value;
+
+        if (email === "admin@zfit.com" && pass === "123456") {
+            document.getElementById("loginPage").style.display = "none";
+            document.getElementById("system").style.display = "block";
+            initSystem();
+        } else {
+            document.getElementById("loginError").innerText = "Invalid Credentials";
+        }
+    }
+
+    function initSystem() {
+        renderMembers();
+        updateStats();
+        initCalendar();
+    }
+
+    // NAVIGATION
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'booking') {
+            setTimeout(() => calendar.render(), 100); // Fix for FullCalendar rendering in hidden div
+        }
+    }
+
+    // MEMBER LOGIC
+    function addMember() {
+        const name = document.getElementById("mName").value;
+        const phone = document.getElementById("mPhone").value;
+        const months = parseInt(document.getElementById("mPlan").value);
+
+        if (!name || !phone) return alert("Please fill all fields");
+
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + (months * 30));
+
+        const newMember = {
+            id: Date.now(),
+            name,
+            phone,
+            plan: months === 1 ? "Monthly" : (months === 3 ? "3 Months" : "Yearly"),
+            expiry: expiryDate.toISOString()
+        };
+
+        members.push(newMember);
+        localStorage.setItem("z_members", JSON.stringify(members));
+        
+        // Reset Form
+        document.getElementById("mName").value = "";
+        document.getElementById("mPhone").value = "";
+        
+        renderMembers();
+        updateStats();
+    }
+
+    function renderMembers(data = members) {
+        const table = document.getElementById("membersTable");
+        const now = new Date();
+        table.innerHTML = "";
+
+        data.forEach(m => {
+            const expDate = new Date(m.expiry);
+            const isExpired = now > expDate;
+            
+            table.innerHTML += `
+                <tr>
+                    <td>${m.name}</td>
+                    <td>${m.phone}</td>
+                    <td>${m.plan}</td>
+                    <td>${expDate.toLocaleDateString()}</td>
+                    <td>
+                        <span class="status-badge ${isExpired ? 'status-expired' : 'status-active'}">
+                            ${isExpired ? 'EXPIRED' : 'ACTIVE'}
+                        </span>
+                    </td>
+                    <td>
+                        <button onclick="deleteMember(${m.id})" style="background:none; border:none; color:red; cursor:pointer;">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function deleteMember(id) {
+        if(!confirm("Are you sure?")) return;
+        members = members.filter(m => m.id !== id);
+        localStorage.setItem("z_members", JSON.stringify(members));
+        renderMembers();
+        updateStats();
+    }
+
+    function filterMembers() {
+        const query = document.getElementById("searchBar").value.toLowerCase();
+        const filtered = members.filter(m => m.name.toLowerCase().includes(query));
+        renderMembers(filtered);
+    }
+
+    // STATS
+    function updateStats() {
+        document.getElementById("statTotalMembers").innerText = members.length;
+        document.getElementById("statTotalBookings").innerText = bookings.length;
+    }
+
+    // CALENDAR LOGIC
+    function initCalendar() {
+        const calendarEl = document.getElementById('calendar');
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            selectable: true,
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            select: function(info) {
+                const title = prompt("Enter Booking Details (e.g., John - Personal Training):");
+                if (title) {
+                    const newBooking = { title, start: info.startStr };
+                    bookings.push(newBooking);
+                    localStorage.setItem("z_bookings", JSON.stringify(bookings));
+                    calendar.addEvent(newBooking);
+                    updateStats();
+                }
+            },
+            events: bookings
+        });
+        calendar.render();
+    }
+</script>
+
+</body>
+</html>
