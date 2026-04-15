@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fit90 Admin System</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+
+<!-- Chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0a0a0a;
+  color: white;
+}
+
+.hidden { display: none; }
+
+.sidebar {
+  width: 220px;
+  background: #000;
+  height: 100vh;
+  position: fixed;
+  padding: 20px;
+}
+
+.main {
+  margin-left: 240px;
+  padding: 20px;
+}
+
+.card {
+  background: #111;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  background: #222;
+  border: none;
+  color: white;
+}
+
+button {
+  padding: 10px;
+  background: #00ff88;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" style="padding:20px;">
+  <h2>Fit90 Login</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="register()">Register</button>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+  <div class="sidebar">
+    <h3>Fit90</h3>
+    <button onclick="showPage('dashboard')">Dashboard</button>
+    <button onclick="showPage('users')">Users</button>
+    <button onclick="showPage('bookings')">Bookings</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div class="main">
+
+    <!-- Dashboard -->
+    <div id="dashboardPage">
+      <h2>Dashboard</h2>
+
+      <div class="card">
+        <p id="totalUsers">Users: 0</p>
+        <p id="totalBookings">Bookings: 0</p>
+      </div>
+
+      <div class="card">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div id="usersPage" class="hidden">
+      <h2>Users</h2>
+      <div id="usersList"></div>
+    </div>
+
+    <!-- Bookings -->
+    <div id="bookingsPage" class="hidden">
+      <h2>Bookings</h2>
+
+      <div class="card">
+        <select id="bookingType">
+          <option>PT</option>
+          <option>Class</option>
+        </select>
+
+        <input type="date" id="bookingDate">
+        <button onclick="createBooking()">Create Booking</button>
+      </div>
+
+      <div id="bookingsList"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// 🔥 ضع بيانات Firebase هنا
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// AUTH
+function register() {
+  auth.createUserWithEmailAndPassword(email(), pass())
+    .then(user => {
+      db.collection("users").doc(user.user.uid).set({
+        email: email(),
+        role: "admin"
+      });
+      alert("Registered");
+    });
+}
+
+function login() {
+  auth.signInWithEmailAndPassword(email(), pass())
+    .then(() => initApp());
+}
+
+function logout() {
+  auth.signOut();
+  location.reload();
+}
+
+function email() { return document.getElementById("email").value; }
+function pass() { return document.getElementById("password").value; }
+
+// UI
+function showPage(page) {
+  ["dashboard","users","bookings"].forEach(p => {
+    document.getElementById(p + "Page").classList.add("hidden");
+  });
+  document.getElementById(page + "Page").classList.remove("hidden");
+}
+
+// INIT
+function initApp() {
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+
+  loadUsers();
+  loadBookings();
+}
+
+// USERS
+function loadUsers() {
+  db.collection("users").onSnapshot(snap => {
+    let html = "";
+    snap.forEach(doc => {
+      html += `<div class="card">${doc.data().email}</div>`;
+    });
+    usersList.innerHTML = html;
+    totalUsers.innerText = "Users: " + snap.size;
+  });
+}
+
+// BOOKINGS
+function createBooking() {
+  db.collection("bookings").add({
+    userId: auth.currentUser.uid,
+    type: bookingType.value,
+    date: bookingDate.value
+  });
+}
+
+function loadBookings() {
+  db.collection("bookings").onSnapshot(snap => {
+    let html = "";
+    let stats = {};
+
+    snap.forEach(doc => {
+      let d = doc.data();
+      html += `<div class="card">${d.type} - ${d.date}</div>`;
+      stats[d.type] = (stats[d.type] || 0) + 1;
+    });
+
+    bookingsList.innerHTML = html;
+    totalBookings.innerText = "Bookings: " + snap.size;
+
+    drawChart(stats);
+  });
+}
+
+// CHART
+let chart;
+function drawChart(data) {
+  let ctx = document.getElementById("chart");
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+        data: Object.values(data)
+      }]
+    }
+  });
+}
+</script>
+
+</body>
+</html>
